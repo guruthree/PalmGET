@@ -39,7 +39,7 @@ m68k-palmos-gcc PalmGET.c -o PalmGET.o -lNetSocket -specs=/path/to/specs2 -palmo
     -B/path/to/prc-tools-remix/dist/usr/m68k-palmos/lib/ \
     -B/path/to/palm-os-sdk/sdk-4/lib/m68k-palmos-coff/
 m68k-palmos-obj-res PalmGET.o
-build-prc PalmGET.prc "PalmGET" WRLD *.PalmGET.grc
+build-prc PalmGET.prc "PalmGET" PGET *.PalmGET.grc
 ```
 
 I'm not 100% sure what all of this is doing, but it does it. The first arguments to gcc are the standard source and object file type arguments. `-lNetSocket` links against the PalmOS networking library, the remaining arguments are for linking against the PalmOS system libraries.
