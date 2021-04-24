@@ -1,0 +1,4 @@
+*.prc
+*.grc
+*.o
+compile.sh
