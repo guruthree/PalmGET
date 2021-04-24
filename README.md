@@ -34,11 +34,11 @@ export PATH="/path/to/prc-tools-remix/dist/usr/bin:$PATH"
 To compile:
 
 ```
-m68k-palmos-gcc PalmGET.c -o PalmGET -lNetSocket -specs=/path/to/specs2 -palmos4 \
+m68k-palmos-gcc PalmGET.c -o PalmGET.o -lNetSocket -specs=/path/to/specs2 -palmos4 \
     -B/path/to/prc-tools-remix/dist/usr/lib/gcc-lib/ \
     -B/path/to/prc-tools-remix/dist/usr/m68k-palmos/lib/ \
     -B/path/to/palm-os-sdk/sdk-4/lib/m68k-palmos-coff/
-m68k-palmos-obj-res PalmGET
+m68k-palmos-obj-res PalmGET.o
 build-prc PalmGET.prc "PalmGET" WRLD *.PalmGET.grc
 ```
 
