@@ -9,6 +9,10 @@ Err errno; // required for sys_socket.h
 #define BUF_LEN 4096
 Char temp[BUF_LEN];
 
+// the main text we're going to show
+// text going into a form/field needs to be global in scope for some reason?
+Char mytext[BUF_LEN];
+
 // the web patch we're retrieving
 #define TO_GET "/read.php?a=https%3A%2F%2Fguru3.net%2F&rut=6ed088717b37f78a330a2c3536d375d969e83775e40dc1f14bdbb0095915e977"
 #define REMOTE_HOST "frogfind.com"
@@ -41,10 +45,6 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         // vars for string manipulation
         Char *found;
         int i;
-
-        // the main text we're going to show
-        Char mytext[BUF_LEN];
-        mytext[0] = '\0';
 
         // check PalmOS version here
         FtrGet(sysFtrCreator, sysFtrNumROMVersion, &romVersion);
