@@ -1,5 +1,6 @@
 #include <PalmOS.h>
 #include <Field.h>
+#include <StdIOPalm.h>
 #include <Unix/sys_socket.h> // treat PalmOS sockets as UNIX sockets
 Err errno; // required for sys_socket.h
 
@@ -24,6 +25,9 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         // for some reason all variables need to be at the start of a block
         EventType event;
 
+        // for checking PalmOS version
+        UInt32 romVersion;
+
         // form for display
         FieldType *field;
         FormType *formP;
@@ -42,12 +46,19 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         Char mytext[BUF_LEN];
         mytext[0] = '\0';
 
-        // should really check PalmOS version here
+        // check PalmOS version here
+        FtrGet(sysFtrCreator, sysFtrNumROMVersion, &romVersion);
+        if (romVersion <= sysMakeROMVersion(3,5,0,0,0)) {
+            WinDrawChars( "Too old", 7, 60, 20 );
+            // I'm not really sure what will happen here, watch out!
+            return;
+        }
 
         // some output while fetching is happening
         WinDrawChars( "Running...", 10, 60, 20 );
 
         // construct the HTTP request
+        // sprintf is wrapped to StrPrintF by StdIOPalm.h
         sprintf(mytext, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", TO_GET, REMOTE_HOST);
 
         // check if the net library exists
@@ -96,7 +107,8 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
                             // note the use of PalmOS functions, not c standard functions
                             MemSet(temp, BUF_LEN, 0);
                             // read as much data as is available and append it to mytext for display
-                            while(read(socket_desc, temp, BUF_LEN - 1) != 0){
+                            // note this is not C standard read, but a wrapper for NetLibReceive
+                            while (read(socket_desc, temp, BUF_LEN - 1) != 0){
                                 StrCat(mytext, temp);
                                 MemSet(temp, BUF_LEN, 0); // re-zero buffer
                             }
