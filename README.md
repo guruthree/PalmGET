@@ -1,8 +1,6 @@
 # PalmGET
 PalmOS4 application to GET an HTTP page.
 
-Change the `#define`s for
-
 ## Requirements
 
 PalmOS SDK 4
@@ -67,5 +65,7 @@ To setup the PalmPilot, in the Connection section of Prefs, make sure Cradle/Cab
 Just send the PRC to the PalmPilot using `pilot-xfer` from https://github.com/jichu4n/pilot-link (this is probably in your distro's repo), then tap on the screen to run. The application when it launches will start the network connection.
 
 `pilot-xfer -p /dev/ttyUSB0 -i PalmGET.prc`
+
+To change the page being displayed, edit the `#define`s, with the URI (without hostname) in `TO_GET` and the hostname in `REMOTE_HOST`.
 
 Note, there is a risk of crashing with a Fatal Exception requiring a soft or hard reset. Use at your own risk.
