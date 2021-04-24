@@ -35,6 +35,7 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         // form for display
         FieldType *field;
         FormType *formP;
+        ControlType *ctrl;
 
         // variables for sockets
         int socket_desc;
@@ -146,15 +147,21 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         // programmatically construct a form... PalmOS support for this is sketchy
         // just make a big 160x160 that's a text field
         formP = FrmNewForm(1000, "Main Form", 0, 0, 160, 160, false, 0, 0, 0);
-        field = FldNewField((void**)&formP, 1000, 0, 0, 160, 160, 0,  
+        field = FldNewField((void**)&formP, 1000, 0, 15, 160, 160-15, 0,  
             BUF_LEN, false, noUnderline, false, true, leftAlign, true, true, false);
         // (normally the form would be constructed using an IDE?)
 
         // update the text field with mytext... according to the PalmOS reference 
         // manual this is not a good idea and handles should be used instead
+        // note, this needs to be done before CtlNewControl as otherwise field
+        // has the wrong formP reference?
         FldSetTextPtr(field, mytext);
         FldDrawField(field); // needed to update the text field
         FldRecalculateField(field, true); // not sure if this is needed?
+
+        // a button to trigger fetching
+        ctrl = CtlNewControl((void**)&formP, 1002, buttonCtl, "GET", 130, 1, 28, 12, 0, 0, false);
+        CtlShowControl(ctrl);
 
 		FrmSetActiveForm(formP); // activate the form for display
 
