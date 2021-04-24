@@ -3,8 +3,8 @@ PalmOS4 application to GET an HTTP page.
 
 ## Requirements
 
-PalmOS SDK 4
-GCC for Palm
+* PalmOS SDK 4
+* GCC for Palm
 
 ## Setting up the SDK
 
