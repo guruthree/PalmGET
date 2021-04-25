@@ -6,7 +6,7 @@ Err errno; // required for sys_socket.h
 
 // max string length a bit of temporary memory for stuff
 // if the web page being retrieved is bigger than this, we're in for a Bad Time
-#define BUF_LEN 4096
+#define BUF_LEN 4095
 Char temp[BUF_LEN];
 
 // the main text we're going to show
@@ -19,7 +19,21 @@ Char mytext[BUF_LEN];
 #define REMOTE_PORT 80
 
 // function declarations
+void fetchHTML();
 int stripHTMLTags(char *sToClean,size_t size);
+
+// I can't get updating the text to work, so just delete and re-create field 1000 instead
+void deleteMyField(FormType *formP) {
+    FrmRemoveObject(&formP, FrmGetObjectIndex(formP, 1000));
+}
+void createMyField(FormType *formP, FieldType **field) {
+    // a big text field to display output
+    *field = FldNewField((void**)&formP, 1000, 0, 31, 160, 160-31, 0,  
+        BUF_LEN+1, false, noUnderline, false, true, leftAlign, true, false, false);
+    FldSetTextPtr(*field, mytext);
+    FldDrawField(*field);
+    FldRecalculateField(*field, true); // line wrapping
+}
 
 // entry point
 UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
@@ -37,16 +51,6 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         FormType *formP;
         ControlType *ctrl;
 
-        // variables for sockets
-        int socket_desc;
-        UInt16 badIF = 0;
-        struct sockaddr_in server;
-    	struct hostent *hp;
-
-        // vars for string manipulation
-        Char *found;
-        int i;
-
         // check PalmOS version here
         FtrGet(sysFtrCreator, sysFtrNumROMVersion, &romVersion);
         if (romVersion <= sysMakeROMVersion(3,5,0,0,0)) {
@@ -55,115 +59,20 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
             return;
         }
 
-        // some output while fetching is happening
-        WinDrawChars( "Running...", 10, 60, 20 );
-
-        // construct the HTTP request
-        // sprintf is wrapped to StrPrintF by StdIOPalm.h
-        sprintf(mytext, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", TO_GET, REMOTE_HOST);
-
-        // check if the net library exists
-        if (SysLibFind("Net.lib", &AppNetRefnum)) // returns 0 if not found?
-        {
-            StrCat(mytext, "Could not find NetLib\n");
-        }
-        else
-        {   // check if we can open the network library (starts network connection?_
-            if (NetLibOpen(AppNetRefnum, &badIF))
-            {
-                StrCat(mytext, "Could not open NetLib\n");
-            }
-            else
-            {
-                // create a socket and open it
-                // https://www.binarytides.com/socket-programming-c-linux-tutorial/
-               	socket_desc = socket(AF_INET, SOCK_STREAM , 0); 
-                if (socket_desc == -1)
-                {
-                    StrCat(mytext, "Could not create socket\n");
-                }
-                else
-                {
-                    // convert hostname to IP address directly in socket
-                    hp = gethostbyname(REMOTE_HOST);
-                    bcopy(hp->h_addr, (char*)&server.sin_addr, hp->h_length);
-
-                    // IPv4 and specify port
-                    server.sin_family = AF_INET;
-                    server.sin_port = htons(REMOTE_PORT);
-
-                    // connect the socket
-	                if (connect(socket_desc, (struct sockaddr *)&server , sizeof(server)) < 0)
-	                {
-                        StrCat(mytext, "Connect error\n");
-	                }
-                    else // connected
-                    {   // send HTTP request
-	                    if( send(socket_desc , mytext , StrLen(mytext) , 0) < 0)
-	                    {
-                            StrCat(mytext, "Send failed\n");
-	                    }
-                        else // data sent
-                        {   // zero out buffer (needed to ensure string is null terminated)
-                            // note the use of PalmOS functions, not c standard functions
-                            MemSet(temp, BUF_LEN, 0);
-                            // read as much data as is available and append it to mytext for display
-                            // note this is not C standard read, but a wrapper for NetLibReceive
-                            while (read(socket_desc, temp, BUF_LEN - 1) != 0){
-                                StrCat(mytext, temp);
-                                MemSet(temp, BUF_LEN, 0); // re-zero buffer
-                            }
-                            StrCat(mytext, "\n"); // a final new line
-
-                            // strip out HTML tags to make display nicer on the screen
-                            // if you're getting fatal exceptions, this may be the cause
-                            stripHTMLTags(mytext, StrLen(mytext));
-                        }
-                    }
-                    // make sure to close the socket after transfers are done or PalmOS may run out of them
-                    close(socket_desc);
-                }
-            }
-        }
-
-        // PalmOS can't display the carriage returns, replace them with new lines
-        // maybe replace with TxtReplaceStr ?
-        found = StrChr(mytext, '\r');
-        while (found != NULL) {
-            *found = '\n'; // ' ' 
-            found = StrChr(mytext, '\r');
-        }
-
-        // remove double newlines and replace one with a space
-        for (i = 0; i < StrLen(mytext)-1; i++) {
-            if (mytext[i] == '\n' && mytext[i+1] == '\n') {
-                mytext[i] = ' ';
-            }
-        }
-
-        // append this to the end so we know when the data ends
-        StrCat(mytext, "\nALL DONE2\n");
-
         // programmatically construct a form... PalmOS support for this is sketchy
-        // just make a big 160x160 that's a text field
-        formP = FrmNewForm(1000, "Main Form", 0, 0, 160, 160, false, 0, 0, 0);
-        field = FldNewField((void**)&formP, 1000, 0, 15, 160, 160-15, 0,  
-            BUF_LEN, false, noUnderline, false, true, leftAlign, true, true, false);
         // (normally the form would be constructed using an IDE?)
+        formP = FrmNewForm(1000, "PalmGET", 0, 0, 160, 160, false, 0, 0, 0);
 
-        // update the text field with mytext... according to the PalmOS reference 
-        // manual this is not a good idea and handles should be used instead
-        // note, this needs to be done before CtlNewControl as otherwise field
-        // has the wrong formP reference?
-        FldSetTextPtr(field, mytext);
-        FldDrawField(field); // needed to update the text field
-        FldRecalculateField(field, true); // not sure if this is needed?
+        MemSet(mytext, BUF_LEN, 0);
+        StrCopy(mytext, "Press GET");
+        createMyField(formP, &field);
 
-        // a button to trigger fetching
-        ctrl = CtlNewControl((void**)&formP, 1002, buttonCtl, "GET", 130, 1, 28, 12, 0, 0, false);
+        // a button to trigger fetching the URL
+        ctrl = CtlNewControl((void**)&formP, 1001, buttonCtl, "GET", 130, 17, 0, 0, 0, NULL, true);
         CtlShowControl(ctrl);
 
 		FrmSetActiveForm(formP); // activate the form for display
+        FrmDrawForm(formP); // draw it (not required?)
 
         //  Main event loop:
         do {
@@ -172,6 +81,7 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
 
             //  system gets first chance to handle the event
             if (!SysHandleEvent( &event )) {
+			    FrmDispatchEvent(&event); // needed to get button presses to work
                 switch (event.eType) {
                     case keyDownEvent:
                         // scroll up and down
@@ -181,18 +91,133 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
                             FldScrollField(field, 2, winDown);
                         }
                         break;
+
+                    case ctlSelectEvent:
+                        if (event.data.ctlSelect.controlID == 1001) {
+                            // do things when pressing the GET button
+                            deleteMyField(formP);
+                            fetchHTML();
+                            createMyField(formP, &field);
+                        }
+                        break;
+                        
                 }
             }
 
-        // Return from PilotMain when an appStopEvent is received.
+        // return from PilotMain when an appStopEvent is received
         } while (event.eType != appStopEvent);
 
-        // close the library when we go (or we may run out)
-        NetLibClose(AppNetRefnum, false);
     }
     return;
 }
 
+// do the GET
+void fetchHTML() {
+    // variables for sockets
+    int socket_desc;
+    UInt16 badIF = 0;
+    struct sockaddr_in server;
+	struct hostent *hp;
+
+    // vars for string manipulation
+    Char *found;
+    int i;
+
+    // construct the HTTP request
+    // sprintf is wrapped to StrPrintF by StdIOPalm.h
+    MemSet(mytext, BUF_LEN, 0);
+    sprintf(mytext, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", TO_GET, REMOTE_HOST);
+
+    // check if the net library exists
+    if (SysLibFind("Net.lib", &AppNetRefnum)) // returns 0 if not found?
+    {
+        StrCat(mytext, "Could not find NetLib\n");
+        return;
+    }
+    else
+    {   // check if we can open the network library (starts network connection?)
+        if (NetLibOpen(AppNetRefnum, &badIF))
+        {
+            StrCat(mytext, "Could not open NetLib\n");
+            return;
+        }
+        else
+        {
+            // create a socket and open it
+            // https://www.binarytides.com/socket-programming-c-linux-tutorial/
+           	socket_desc = socket(AF_INET, SOCK_STREAM , 0); 
+            if (socket_desc == -1)
+            {
+                StrCat(mytext, "Could not create socket\n");
+                return;
+            }
+            else
+            {
+                // convert hostname to IP address directly in socket
+                hp = gethostbyname(REMOTE_HOST);
+                bcopy(hp->h_addr, (char*)&server.sin_addr, hp->h_length);
+
+                // IPv4 and specify port
+                server.sin_family = AF_INET;
+                server.sin_port = htons(REMOTE_PORT);
+
+                // connect the socket
+                if (connect(socket_desc, (struct sockaddr *)&server , sizeof(server)) < 0)
+                {
+                    StrCat(mytext, "Connect error\n");
+                    return;
+                }
+                else // connected
+                {   // send HTTP request
+                    if( send(socket_desc , mytext , StrLen(mytext) , 0) < 0)
+                    {
+                        StrCat(mytext, "Send failed\n");
+                        return;
+                    }
+                    else // data sent
+                    {   // zero out buffer (needed to ensure string is null terminated)
+                        // note the use of PalmOS functions, not c standard functions
+                        MemSet(temp, BUF_LEN, 0);
+                        // read as much data as is available and append it to mytext for display
+                        // note this is not C standard read, but a wrapper for NetLibReceive
+                        while (read(socket_desc, temp, BUF_LEN - 1) != 0){
+                            StrCat(mytext, temp);
+                            MemSet(temp, BUF_LEN, 0); // re-zero buffer
+                        }
+                        StrCat(mytext, "\n"); // a final new line
+
+                        // strip out HTML tags to make display nicer on the screen
+                        // if you're getting fatal exceptions, this may be the cause
+                        stripHTMLTags(mytext, StrLen(mytext));
+                    }
+                }
+                // make sure to close the socket after transfers are done or PalmOS may run out of them
+                close(socket_desc);
+            }
+        }
+    }
+
+    // close the library when we go (or we may run out)
+    NetLibClose(AppNetRefnum, false);
+
+    // PalmOS can't display the carriage returns, replace them with new lines
+    // maybe replace with TxtReplaceStr ?
+    found = StrChr(mytext, '\r');
+    while (found != NULL) {
+        *found = '\n'; // ' ' 
+        found = StrChr(mytext, '\r');
+    }
+
+    // remove double newlines and replace one with a space
+    for (i = 0; i < StrLen(mytext)-1; i++) {
+        if (mytext[i] == '\n' && mytext[i+1] == '\n') {
+            mytext[i] = ' ';
+        }
+    }
+
+    // append this to the end so we know when the data ends
+    StrCat(mytext, "\nALL DONE2\n");
+}
 
 // function to strip tags, taken from
 // https://stackoverflow.com/questions/9444200/c-strip-html-between

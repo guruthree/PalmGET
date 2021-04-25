@@ -62,7 +62,7 @@ To setup the PalmPilot, in the Connection section of Prefs, make sure Cradle/Cab
 
 ## Running
 
-Just send the PRC to the PalmPilot using `pilot-xfer` from https://github.com/jichu4n/pilot-link (this is probably in your distro's repo), then tap on the screen to run. The application when it launches will start the network connection.
+Just send the PRC to the PalmPilot using `pilot-xfer` from https://github.com/jichu4n/pilot-link (this is probably in your distro's repo), then tap on the screen to run. Press "GET" to fetch the pre-programmed URL. Pressing "GET" will start the network connection.
 
 `pilot-xfer -p /dev/ttyUSB0 -i PalmGET.prc`
 
