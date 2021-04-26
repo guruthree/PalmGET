@@ -5,6 +5,7 @@ PalmOS4 application to GET an HTTP page.
 
 * PalmOS SDK 4
 * GCC for Palm
+* PiLRC
 
 ## Setting up the SDK
 
@@ -29,6 +30,14 @@ export PATH="/path/to/prc-tools-remix/dist/usr/m68k-palmos/bin:$PATH"
 export PATH="/path/to/prc-tools-remix/dist/usr/bin:$PATH"
 ```
 
+## Setting up PiLRC
+
+PiLRC is needed for encoding resources into the PRC file. Grab it from https://sourceforge.net/projects/pilrc/files/pilrc/3.2/, I used the .tar.gz. Compiling is straightforward from the pilrc-3.2 folder, run `./unix/configure` followed by make and it's done. `pilrc` can be run from the folder no problem, and no patches needed to compile on a modern system. Just add it to the `$PATH`.
+
+```
+export PATH="/path/to/pilrc-3.2:$PATH"
+```
+
 ## Compiling
 
 To compile:
@@ -39,7 +48,9 @@ m68k-palmos-gcc PalmGET.c -o PalmGET.o -lNetSocket -specs=/path/to/specs2 -palmo
     -B/path/to/prc-tools-remix/dist/usr/m68k-palmos/lib/ \
     -B/path/to/palm-os-sdk/sdk-4/lib/m68k-palmos-coff/
 m68k-palmos-obj-res PalmGET.o
-build-prc PalmGET.prc "PalmGET" PGET *.PalmGET.grc
+pilrc *.rcp
+build-prc PalmGET.prc "PalmGET" PGET *.grc *.bin
+rm *.grc *.bin
 ```
 
 I'm not 100% sure what all of this is doing, but it does it. The first arguments to gcc are the standard source and object file type arguments. `-lNetSocket` links against the PalmOS networking library, the remaining arguments are for linking against the PalmOS system libraries.

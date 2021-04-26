@@ -1,6 +1,7 @@
 #include <PalmOS.h>
 #include <Field.h>
 #include <StdIOPalm.h>
+#include "PalmGETRsc.h"
 #include <Unix/sys_socket.h> // treat PalmOS sockets as UNIX sockets
 Err errno; // required for sys_socket.h
 
@@ -22,19 +23,6 @@ Char mytext[BUF_LEN];
 void fetchHTML();
 int stripHTMLTags(char *sToClean,size_t size);
 
-// I can't get updating the text to work, so just delete and re-create field 1000 instead
-void deleteMyField(FormType *formP) {
-    FrmRemoveObject(&formP, FrmGetObjectIndex(formP, 1000));
-}
-void createMyField(FormType *formP, FieldType **field) {
-    // a big text field to display output
-    *field = FldNewField((void**)&formP, 1000, 0, 31, 160, 160-31, 0,  
-        BUF_LEN+1, false, noUnderline, false, true, leftAlign, true, false, false);
-    FldSetTextPtr(*field, mytext);
-    FldDrawField(*field);
-    FldRecalculateField(*field, true); // line wrapping
-}
-
 // entry point
 UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
 {
@@ -46,10 +34,11 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
         // for checking PalmOS version
         UInt32 romVersion;
 
-        // form for display
-        FieldType *field;
-        FormType *formP;
+        // formP for display
+        FieldType *field, *urifield;
+        FormPtr formP;
         ControlType *ctrl;
+        MemHandle textH;
 
         // check PalmOS version here
         FtrGet(sysFtrCreator, sysFtrNumROMVersion, &romVersion);
@@ -59,17 +48,31 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
             return;
         }
 
-        // programmatically construct a form... PalmOS support for this is sketchy
-        // (normally the form would be constructed using an IDE?)
-        formP = FrmNewForm(1000, "PalmGET", 0, 0, 160, 160, false, 0, 0, 0);
+        // load formP resource
+    	FrmGotoForm(PalmGETForm);
+        formP = FrmInitForm(PalmGETForm);
 
+        // main text field for display
+        field = FrmGetObjectPtr(formP, FrmGetObjectIndex(formP, DataField));
+
+        // text for main text field
         MemSet(mytext, BUF_LEN, 0);
         StrCopy(mytext, "Press GET");
-        createMyField(formP, &field);
 
-        // a button to trigger fetching the URL
-        ctrl = CtlNewControl((void**)&formP, 1001, buttonCtl, "GET", 130, 17, 0, 0, 0, NULL, true);
-        CtlShowControl(ctrl);
+        // apply text to main display text field
+        textH = MemHandleNew(1+StrLen(mytext));
+        StrCopy(MemHandleLock(textH), mytext);
+        MemHandleUnlock(textH);
+        FldSetTextHandle(field, textH);
+        FldDrawField(field);
+
+        // address bar
+        urifield = FrmGetObjectPtr(formP, FrmGetObjectIndex(formP, URIField));
+        textH = MemHandleNew(201);
+        StrCopy(MemHandleLock(textH), "http://");
+        MemHandleUnlock(textH);
+        FldSetTextHandle(urifield, textH);
+        FldDrawField(urifield);
 
 		FrmSetActiveForm(formP); // activate the form for display
         FrmDrawForm(formP); // draw it (not required?)
@@ -93,11 +96,19 @@ UInt32 PilotMain( UInt16 cmd, void *cmdPBP, UInt16 launchFlags )
                         break;
 
                     case ctlSelectEvent:
-                        if (event.data.ctlSelect.controlID == 1001) {
+
+                        if (event.data.ctlSelect.controlID == GETButton) {
                             // do things when pressing the GET button
-                            deleteMyField(formP);
                             fetchHTML();
-                            createMyField(formP, &field);
+
+                            textH = FldGetTextHandle(field);
+                            FldSetTextHandle(field, NULL);
+                            if (textH) MemHandleFree(textH);
+                            textH = MemHandleNew(1+StrLen(mytext));
+                            StrCopy(MemHandleLock(textH), mytext);
+                            MemHandleUnlock(textH);
+                            FldSetTextHandle(field, textH);
+                            FldDrawField(field);
                         }
                         break;
                         
@@ -221,8 +232,8 @@ int stripHTMLTags(char *sToClean, size_t size)
     {
         int i=0,j=0,k=0;
         int flag = 0; // 0: searching for < or & (& as in &bspn; etc), 1: searching for >, 2: searching for ; after &, 3: searching for </script>,</style>, -->
-//        char temp[8192] = "";
         char searchbuf[BUF_LEN] =  "";
+        MemSet(temp, BUF_LEN, 0);
 
         while(i<size)
         {
