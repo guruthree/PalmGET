@@ -132,14 +132,12 @@ void fetchHTML() {
     if (SysLibFind("Net.lib", &AppNetRefnum)) // returns 0 if not found?
     {
         StrCat(mytext, "Could not find NetLib\n");
-        return;
     }
     else
     {   // check if we can open the network library (starts network connection?)
         if (NetLibOpen(AppNetRefnum, &badIF))
         {
             StrCat(mytext, "Could not open NetLib\n");
-            return;
         }
         else
         {
@@ -149,7 +147,6 @@ void fetchHTML() {
             if (socket_desc == -1)
             {
                 StrCat(mytext, "Could not create socket\n");
-                return;
             }
             else
             {
@@ -165,14 +162,12 @@ void fetchHTML() {
                 if (connect(socket_desc, (struct sockaddr *)&server , sizeof(server)) < 0)
                 {
                     StrCat(mytext, "Connect error\n");
-                    return;
                 }
                 else // connected
                 {   // send HTTP request
                     if( send(socket_desc , mytext , StrLen(mytext) , 0) < 0)
                     {
                         StrCat(mytext, "Send failed\n");
-                        return;
                     }
                     else // data sent
                     {   // zero out buffer (needed to ensure string is null terminated)
@@ -194,11 +189,11 @@ void fetchHTML() {
                 // make sure to close the socket after transfers are done or PalmOS may run out of them
                 close(socket_desc);
             }
+
+            // close the library when we go (or we may run out)
+            NetLibClose(AppNetRefnum, false);
         }
     }
-
-    // close the library when we go (or we may run out)
-    NetLibClose(AppNetRefnum, false);
 
     // PalmOS can't display the carriage returns, replace them with new lines
     // maybe replace with TxtReplaceStr ?
